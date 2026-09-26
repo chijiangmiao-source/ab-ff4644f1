@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>声学应急控制器规程等价复核</title>
+<style>
+  :root{
+    --bg:#0e1726; --panel:#16223a; --panel2:#1d2c49; --line:#2c4066;
+    --ink:#e6edf7; --mut:#9fb0cc; --acc:#4da3ff; --ok:#2fbf71; --bad:#ff5d6c;
+    --warn:#ffb84d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+       background:var(--bg);color:var(--ink);line-height:1.5}
+  header{padding:18px 24px;border-bottom:1px solid var(--line);
+         background:linear-gradient(120deg,#12203a,#0e1726)}
+  header h1{margin:0;font-size:20px}
+  header p{margin:6px 0 0;color:var(--mut);font-size:13px}
+  main{max-width:1280px;margin:0 auto;padding:20px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:1000px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .panel h2{margin:0 0 12px;font-size:16px;display:flex;justify-content:space-between;align-items:center}
+  .tag{font-size:12px;color:var(--mut);font-weight:400}
+  label{font-size:12px;color:var(--mut);display:block;margin:10px 0 4px}
+  input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--line);
+       color:var(--ink);border-radius:6px;padding:7px 9px;font-size:13px;font-family:monospace}
+  input.invalid{border-color:var(--bad);background:#3a1d27}
+  .row{display:flex;gap:8px;align-items:center}
+  .states-tbl,.init-tbl{width:100%;border-collapse:collapse;margin-top:6px}
+  .states-tbl td{padding:3px 4px;vertical-align:middle}
+  .init-tbl input{text-align:center;padding:6px 4px}
+  .init-tbl th{font-size:11px;color:var(--mut);font-weight:400;padding:2px}
+  .del{background:none;border:none;color:var(--bad);cursor:pointer;font-size:15px;padding:2px 4px}
+  button.act{background:var(--acc);color:#081325;border:none;border-radius:7px;
+       padding:9px 18px;font-size:14px;font-weight:600;cursor:pointer}
+  button.sec{background:var(--panel2);color:var(--ink);border:1px solid var(--line);
+       border-radius:7px;padding:9px 14px;font-size:13px;cursor:pointer}
+  button:hover{filter:brightness(1.1)}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0;align-items:center}
+  .tabs{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
+  .tab{padding:5px 12px;font-size:13px;background:var(--panel2);border:1px solid var(--line);
+       border-radius:6px 6px 0 0;cursor:pointer;font-family:monospace}
+  .tab.active{background:#243a63;border-color:var(--acc);color:#fff}
+  .tab.bad{border-color:var(--bad)}
+  .matrix-wrap{overflow:auto;border:1px solid var(--line);border-radius:0 6px 6px 6px}
+  table.mat{border-collapse:collapse;font-size:12px}
+  table.mat th{background:var(--panel2);color:var(--mut);font-weight:400;padding:5px 8px;
+       border:1px solid var(--line);font-family:monospace;white-space:nowrap}
+  table.mat td{border:1px solid var(--line);padding:0;margin:0}
+  table.mat input{width:74px;border:none;background:transparent;color:var(--ink);
+       text-align:center;padding:6px 4px;font-family:monospace;font-size:12px}
+  table.mat input.invalid{background:#3a1d27}
+  .safe-box{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .safe-box label{display:flex;align-items:center;gap:5px;margin:0;background:var(--panel2);
+       border:1px solid var(--line);padding:4px 10px;border-radius:20px;cursor:pointer;color:var(--ink);font-size:13px}
+  .safe-box.invalid{border-color:var(--bad);border-radius:8px;padding:6px}
+  .field-msg{color:var(--bad);font-size:12px;margin-top:4px}
+  #errors{display:none;margin:14px 0;border:1px solid var(--bad);background:#2a1520;
+       border-radius:8px;padding:12px 16px}
+  #errors h3{margin:0 0 8px;color:var(--bad);font-size:14px}
+  #errors li{font-size:13px;margin:3px 0}
+  #errors .loc{color:var(--warn);font-family:monospace;margin-right:6px}
+  #result{display:none;margin-top:18px}
+  .verdict{border-radius:10px;padding:16px 20px;font-size:15px;font-weight:600}
+  .verdict.ok{background:#122b1f;border:1px solid var(--ok);color:#9ff0c4}
+  .verdict.no{background:#2b1419;border:1px solid var(--bad);color:#ffc4ca}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:14px}
+  .word{font-family:monospace;font-size:18px;letter-spacing:2px;background:var(--panel2);
+       padding:8px 12px;border-radius:6px;display:inline-block}
+  table.steps{border-collapse:collapse;width:100%;font-size:12px;margin-top:10px}
+  table.steps th,table.steps td{border:1px solid var(--line);padding:6px 8px;text-align:center;
+       font-family:monospace}
+  table.steps th{background:var(--panel2);color:var(--mut);font-weight:400}
+  td.prob{color:var(--acc);font-weight:600}
+  .diff{color:var(--bad);font-weight:700}
+  .muted{color:var(--mut);font-size:12px}
+  .addrow{margin-top:8px}
+  .cmd-input{width:110px;font-family:monospace}
+  .hint{font-size:11px;color:var(--mut);margin-top:3px}
+  .stale-banner{margin:14px 0;border:1px solid var(--warn);background:#33260f;
+       color:var(--warn);border-radius:8px;padding:10px 16px;font-size:13px}
+  .stepgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>声学应急控制器 · 规程等价复核</h1>
+  <p>全部概率以既约分数（p/q）按任意精度有理数计算；判定覆盖<b>任意有限命令串</b>（含空串），不枚举长度、不使用浮点数。</p>
+</header>
+<main>
+  <div class="grid">
+    <section class="panel" id="panelA"></section>
+    <section class="panel" id="panelB"></section>
+  </div>
+
+  <div class="toolbar">
+    <button class="act" id="btnReview">提交复核</button>
+    <button class="sec" id="btnSave">保存草稿</button>
+    <button class="sec" id="btnLoad">载入草稿</button>
+    <button class="sec" id="btnExample">填入示例（含反例）</button>
+    <button class="sec" id="btnEquivExample">填入等价示例</button>
+    <button class="sec" id="btnClear">清空</button>
+    <span class="muted" id="draftState"></span>
+  </div>
+
+  <div id="errors"><h3>输入存在以下问题，已阻止复核（旧结论已清除）：</h3><ul id="errorList"></ul></div>
+  <div id="stale" class="stale-banner" style="display:none">输入在上次复核后已修改，以下结论可能已失效，请重新“提交复核”。</div>
+  <div id="result"></div>
+</main>
+
+<script>
+"use strict";
+
+/* Each side model:
+   { states:[{name:string}], initial:[string], safe:[bool],
+     commands:[string],            // unique single ASCII chars
+     matrices:{ cmd: [[string]] }  // n x n, row=from col=to
+   } */
+const SIDES = [
+  {key:"a", title:"规程 A · 现网"},
+  {key:"b", title:"规程 B · 候选"},
+];
+const models = { a: emptyModel(), b: emptyModel() };
+const activeTab = { a: 0, b: 0 };
+
+function emptyModel(){
+  return { states: [], initial: [], safe: [], commands: [], matrices: {} };
+}
+
+// ---------------- rendering ----------------
+function renderSide(side){
+  const m = models[side.key];
+  const panel = document.getElementById("panel"+side.key.toUpperCase());
+  panel.innerHTML = "";
+
+  const h2 = el("h2", null, side.title, el("span","tag","分数如 1/3、0、2/5"));
+  panel.appendChild(h2);
+
+  // states + initial
+  panel.appendChild(el("label",null,"状态（每行一个状态名）与初始分布"));
+  const tbl = el("table","states-tbl");
+  m.states.forEach((st,i)=>{
+    const tr = el("tr",null);
+    const td1 = el("td",null);
+    const name = el("input",null); name.type="text"; name.value=st.name;
+    name.dataset.field="statename"; name.dataset.i=i;
+    name.addEventListener("input",()=>{ st.name=name.value; });
+    name.addEventListener("change",()=>{ renderAll(); });
+    td1.appendChild(name);
+    const td2 = el("td",null,"初始"); td2.style.width="40px"; td2.style.color="var(--mut)"; td2.style.fontSize="11px";
+    const td3 = el("td",null); td3.style.width="110px";
+    const inp = cellInput(side.key,"initial",m.initial[i],i);
+    inp.dataset.i=i;
+    inp.addEventListener("input",()=>{ m.initial[i]=inp.value; });
+    td3.appendChild(inp);
+    const td4 = el("td",null); td4.style.width="30px";
+    const del = el("button","del","×"); del.title="删除状态";
+    del.addEventListener("click",()=>{ removeState(side.key,i); });
+    td4.appendChild(del);
+    tr.append(td1,td2,td3,td4);
+    tbl.appendChild(tr);
+  });
+  panel.appendChild(tbl);
+  const addS = el("button","sec addrow","＋ 添加状态");
+  addS.addEventListener("click",()=>addState(side.key));
+  panel.appendChild(addS);
+
+  // safe states
+  panel.appendChild(el("label",null,"安全状态"));
+  const box = el("div","safe-box"); box.id=`safe-${side.key}`;
+  m.states.forEach((st,i)=>{
+    const lab = el("label",null);
+    const ck = el("input",null); ck.type="checkbox"; ck.checked=!!m.safe[i];
+    ck.addEventListener("change",()=>{ m.safe[i]=ck.checked; });
+    lab.append(ck, document.createTextNode(st.name||`状态${i+1}`));
+    box.appendChild(lab);
+  });
+  if(!m.states.length) box.appendChild(el("span","muted","请先添加状态"));
+  panel.appendChild(box);
+
+  // commands
+  panel.appendChild(el("label",null,"ASCII 命令（每个字符一条，如 a b 1）"));
+  const crow = el("div","row",null);
+  const cin = el("input","cmd-input"); cin.placeholder="单字符"; cin.maxLength=1;
+  const cadd = el("button","sec","＋ 添加命令");
+  cadd.addEventListener("click",()=>addCommand(side.key,cin.value));
+  cin.addEventListener("keydown",e=>{ if(e.key==="Enter"){ addCommand(side.key,cin.value); }});
+  crow.append(cin,cadd); panel.appendChild(crow);
+
+  const tabs = el("div","tabs"); tabs.id=`tabs-${side.key}`;
+  m.commands.forEach((c,i)=>{
+    const t = el("div","tab"+(i===activeTab[side.key]?" active":""), cmdLabel(c));
+    t.dataset.cmd=c;
+    t.addEventListener("click",()=>{ activeTab[side.key]=i; renderAll(); });
+    tabs.appendChild(t);
+  });
+  panel.appendChild(tabs);
+
+  // matrix of active command
+  if(m.commands.length){
+    const ci = Math.min(activeTab[side.key], m.commands.length-1);
+    activeTab[side.key]=ci;
+    const cmd = m.commands[ci];
+    panel.appendChild(el("div","hint",`命令 “${cmdLabel(cmd)}” 的转移矩阵：行＝当前状态，列＝下一状态，每行概率之和须为 1`));
+    const wrap = el("div","matrix-wrap"); wrap.id=`matwrap-${side.key}-${cmd}`;
+    const mt = el("table","mat");
+    const hr = el("tr",null, el("th","", "从 ＼ 到"));
+    m.states.forEach(st=>hr.appendChild(el("th",null, st.name||"·")));
+    mt.appendChild(hr);
+    m.states.forEach((st,i)=>{
+      const tr = el("tr",null, el("th",null, st.name||"·"));
+      m.states.forEach((_,j)=>{
+        const td = el("td",null);
+        const v = (m.matrices[cmd] && m.matrices[cmd][i]) ? m.matrices[cmd][i][j] : "";
+        const inp = cellInput(side.key,"matrix",v);
+        inp.dataset.cmd=cmd; inp.dataset.i=i; inp.dataset.j=j;
+        inp.addEventListener("input",()=>{
+          if(!m.matrices[cmd]) m.matrices[cmd]=[];
+          if(!m.matrices[cmd][i]) m.matrices[cmd][i]=[];
+          m.matrices[cmd][i][j]=inp.value;
+        });
+        td.appendChild(inp); tr.appendChild(td);
+      });
+      mt.appendChild(tr);
+    });
+    wrap.appendChild(mt); panel.appendChild(wrap);
+
+    const rm = el("button","sec addrow","删除命令 “"+cmdLabel(cmd)+"”");
+    rm.addEventListener("click",()=>removeCommand(side.key,ci));
+    panel.appendChild(rm);
+  }
+}
+
+function cellInput(side,area,val){
+  const inp=el("input",null); inp.type="text"; inp.value=val??"";
+  inp.dataset.side=side; inp.dataset.area=area;
+  return inp;
+}
+function cmdLabel(c){
+  if(c===" ") return "空格";
+  return c;
+}
+function el(tag,cls,text,...kids){
+  const e=document.createElement(tag);
+  if(cls) e.className=cls;
+  if(text!=null) e.textContent=text;
+  kids.forEach(k=>{ if(k) e.appendChild(k); });
+  return e;
+}
+
+// ---------------- model edits ----------------
+function addState(side){
+  const m=models[side];
+  const i=m.states.length;
+  m.states.push({name:"S"+i});
+  m.initial.push(i===0?"1":"0");
+  m.safe.push(false);
+  Object.keys(m.matrices).forEach(c=>{
+    m.matrices[c].forEach(r=>r.push("0"));
+    m.matrices[c].push(new Array(i+1).fill("0"));
+  });
+  renderAll();
+}
+function removeState(side,i){
+  const m=models[side];
+  m.states.splice(i,1); m.initial.splice(i,1); m.safe.splice(i,1);
+  Object.keys(m.matrices).forEach(c=>{
+    m.matrices[c].splice(i,1);
+    m.matrices[c].forEach(r=>r.splice(i,1));
+  });
+  renderAll();
+}
+function addCommand(side,raw){
+  const c=(raw??"").trim();
+  if(c.length!==1){ alert("命令必须是单个 ASCII 字符"); return; }
+  if(c.charCodeAt(0)>127){ alert("命令必须是 ASCII 字符"); return; }
+  const m=models[side];
+  if(m.commands.includes(c)){ alert("命令已存在"); return; }
+  m.commands.push(c);
+  m.commands.sort((x,y)=>x.charCodeAt(0)-y.charCodeAt(0));
+  activeTab[side]=m.commands.indexOf(c);
+  const n=m.states.length;
+  m.matrices[c]=Array.from({length:n},()=>new Array(n).fill(n?"0":"0"));
+  if(n===1){ m.matrices[c][0][0]="1"; }
+  renderAll();
+}
+function removeCommand(side,i){
+  const m=models[side];
+  const c=m.commands[i];
+  m.commands.splice(i,1); delete m.matrices[c];
+  activeTab[side]=Math.max(0,i-1);
+  renderAll();
+}
+
+function renderAll(){ SIDES.forEach(renderSide); }
+
+// ---------------- serialise ----------------
+function payload(){
+  const out={};
+  SIDES.forEach(s=>{
+    const m=models[s.key];
+    out[s.key]={
+      states:m.states.map(x=>x.name),
+      initial:m.initial.map(x=>String(x).trim()),
+      safe:m.states.map((st,i)=>m.safe[i]?st.name:null).filter(x=>x!==null),
+      commands:m.commands.slice(),
+      matrices:m.matrices,
+    };
+  });
+  return out;
+}
+
+// ---------------- errors ----------------
+function clearMarks(){
+  document.querySelectorAll("input.invalid,.safe-box.invalid,.tab.bad")
+    .forEach(n=>n.classList.remove("invalid","bad"));
+  document.querySelectorAll(".field-msg").forEach(n=>n.remove());
+}
+function markError(e){
+  const side=e.side, q=`[data-side="${side}"]`;
+  let targets=[];
+  if(e.area==="states" && e.index!=null)
+    targets=[...document.querySelectorAll(`[data-field="statename"][data-i="${e.index}"]`)];
+  else if(e.area==="initial" && e.index!=null)
+    targets=[...document.querySelectorAll(`${q}[data-area="initial"][data-i="${e.index}"]`)];
+  else if(e.area==="matrices" && e.command!=null && e.row!=null && e.col!=null)
+    targets=[...document.querySelectorAll(`${q}[data-area="matrix"][data-cmd="${CSS.escape(e.command)}"][data-i="${e.row}"][data-j="${e.col}"]`)];
+  else if(e.area==="matrices" && e.command!=null && e.row!=null)
+    targets=[...document.querySelectorAll(`${q}[data-area="matrix"][data-cmd="${CSS.escape(e.command)}"][data-i="${e.row}"]`)];
+  else if(e.area==="matrices" && e.command!=null){
+    targets=[...document.querySelectorAll(`#tabs-${side} .tab`)].filter(t=>t.dataset.cmd===e.command);
+  }
+  if(e.area==="safe"){ const b=document.getElementById(`safe-${side}`); if(b) b.classList.add("invalid"); }
+  if(e.area==="commands" && e.index!=null){
+    targets=[...document.querySelectorAll(`#tabs-${side} .tab`)];
+  }
+  targets.forEach(t=>t.classList.add(t.classList.contains("tab")?"bad":"invalid"));
+  const anchor = targets[0] || document.getElementById("panel"+side.toUpperCase());
+  if(anchor && anchor.parentElement){
+    const msg=el("div","field-msg",e.message);
+    anchor.insertAdjacentElement("afterend",msg);
+  }
+}
+function showErrors(errs){
+  clearMarks();
+  document.getElementById("result").style.display="none"; // never show stale conclusion
+  const box=document.getElementById("errors");
+  const ul=document.getElementById("errorList");
+  ul.innerHTML="";
+  errs.forEach(e=>{
+    const li=el("li",null);
+    const loc=[];
+    loc.push(e.side==="a"?"[现网A]":"[候选B]");
+    loc.push({states:"状态",initial:"初始分布",safe:"安全状态",commands:"命令",matrices:"转移矩阵",form:"表单"}[e.area]||e.area);
+    if(e.command!=null) loc.push(`命令'${cmdLabel(e.command)}'`);
+    if(e.row!=null) loc.push(`行${e.row+1}`);
+    if(e.col!=null) loc.push(`列${e.col+1}`);
+    if(e.index!=null && (e.area==="initial"||e.area==="states")) loc.push(`#${e.index+1}`);
+    li.appendChild(el("span","loc",loc.join(" ")));
+    li.appendChild(document.createTextNode(e.message));
+    ul.appendChild(li);
+    markError(e);
+  });
+  box.style.display="block";
+}
+function clearErrors(){
+  clearMarks();
+  document.getElementById("errors").style.display="none";
+}
+
+// ---------------- result ----------------
+function fracHTML(v){ return v==null ? '<span class="muted">未定义</span>' : v; }
+function showResult(data){
+  clearErrors();
+  const box=document.getElementById("result");
+  box.innerHTML=""; box.style.display="block";
+  hasResult=true;
+  if(data.equivalent){
+    box.appendChild(el("div","verdict ok","✓ 等价："+data.message));
+    return;
+  }
+  const w=data.witness;
+  box.appendChild(el("div","verdict no","✗ 不等价："+data.message));
+  const card=el("div","card");
+  card.appendChild(el("div",null,"最短反例命令串（长度 "+w.length+"，ASCII 码 "+w.wordCodes.join(",")+"）："));
+  const wd=el("div","word", w.word.length?w.word.replace(/ /g,"␠"):"(空串)");
+  card.appendChild(wd);
+  if(w.note) card.appendChild(el("div","field-msg",w.note));
+
+  // steps tables
+  const sg=el("div","stepgrid"); sg.style.marginTop="12px";
+  [
+    ["A 现网", w.statesA, "distA","safeA","finalA"],
+    ["B 候选", w.statesB, "distB","safeB","finalB"],
+  ].forEach(([title,stateNames,dkey,pkey])=>{
+    const sub=el("div",null); sub.appendChild(el("div","muted",title));
+    const t=el("table","steps");
+    const hr=el("tr",null, el("th","","步"), el("th","","命令"),
+      ...stateNames.map(n=>el("th","",n)), el("th","","安全概率"));
+    t.appendChild(hr);
+    // rows are aligned by step index; a side missing a command has fewer steps
+    w.steps.forEach(st=>{
+      if(!st[dkey] || !st[dkey].length) return;
+      const tr=el("tr",null,
+        el("td",null,st.index),
+        el("td",null, st.command==null?"—":cmdLabel(st.command)),
+      );
+      st[dkey].forEach(p=>tr.appendChild(el("td",null,p)));
+      tr.appendChild(el("td","prob", st[pkey]==null?"未定义":st[pkey]));
+      t.appendChild(tr);
+    });
+    sub.appendChild(t);
+    sg.appendChild(sub);
+  });
+  card.appendChild(sg);
+
+  const summary=el("div",null); summary.style.marginTop="12px";
+  summary.innerHTML = `最终安全概率：现网 A = <b>${fracHTML(w.finalA)}</b> ，候选 B = <b>${fracHTML(w.finalB)}</b>`;
+  card.appendChild(summary);
+  if(w.difference!=null){
+    const d=el("div","diff");
+    d.textContent=`最终概率差 P_A − P_B = ${w.difference}`+(w.differenceDecimal!=null?`  ≈ ${w.differenceDecimal.toExponential(3)}（小数仅用于展示，判定依据有理数精确值）`:"");
+    card.appendChild(d);
+  }
+  box.appendChild(card);
+}
+
+// ---------------- API ----------------
+let hasResult=false;
+function markStale(){
+  if(hasResult) document.getElementById("stale").style.display="block";
+}
+document.addEventListener("input",e=>{ if(e.target.closest && e.target.closest(".panel")) markStale(); }, true);
+document.addEventListener("change",e=>{ if(e.target.closest && e.target.closest(".panel")) markStale(); }, true);
+document.addEventListener("click",e=>{
+  const t=e.target.closest && e.target;
+  if(t && t.closest && t.closest(".tab")) return;  // tab switch changes view only
+  if(t && t.closest && t.closest(".panel button")) markStale();
+}, true);
+
+async function review(){
+  document.getElementById("result").style.display="none";
+  document.getElementById("stale").style.display="none";
+  hasResult=false;
+  let resp;
+  try{
+    resp=await fetch("/api/compare",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(payload()),
+    });
+  }catch(err){
+    showErrors([{side:"a",area:"form",message:"无法连接复核服务："+err}]);
+    return;
+  }
+  const data=await resp.json();
+  if(!resp.ok || data.ok===false){ showErrors(data.errors||[{side:"a",area:"form",message:"服务端错误"}]); return; }
+  showResult(data);
+}
+
+// ---------------- draft ----------------
+const DRAFT_KEY="acoustic-procedure-draft-v1";
+function saveDraft(){
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(payload()));
+  const n=document.getElementById("draftState");
+  n.textContent="草稿已保存 "+new Date().toLocaleTimeString();
+  setTimeout(()=>n.textContent="",4000);
+}
+function loadDraft(){
+  const raw=localStorage.getItem(DRAFT_KEY);
+  if(!raw){ alert("没有已保存的草稿"); return; }
+  hydrate(JSON.parse(raw));
+  document.getElementById("result").style.display="none";
+  document.getElementById("errors").style.display="none";
+}
+function hydrate(data){
+  ["a","b"].forEach(k=>{
+    const d=data[k]||{};
+    const states=(d.states||[]).map(s=>({name:String(s)}));
+    const n=states.length;
+    const initial=(d.initial||[]).slice(0,n).map(String);
+    while(initial.length<n) initial.push("");
+    const safeNames=new Set(d.safe||[]);
+    const safe=states.map(s=>safeNames.has(s.name));
+    const commands=(d.commands||[]).map(String).filter(c=>c.length===1)
+      .sort((x,y)=>x.charCodeAt(0)-y.charCodeAt(0));
+    const matrices={};
+    commands.forEach(c=>{
+      const src=(d.matrices||{})[c]||[];
+      matrices[c]=Array.from({length:n},(_,i)=>{
+        const r=(src[i]||[]).slice(0,n).map(String);
+        while(r.length<n) r.push("");
+        return r;
+      });
+    });
+    models[k]={states,initial,safe,commands,matrices};
+    activeTab[k]=0;
+  });
+  renderAll();
+}
+
+// ---------------- examples ----------------
+function exampleCounter(){
+  hydrate({
+    a:{
+      states:["safe","risk"],
+      initial:["1","0"],
+      safe:["safe"],
+      commands:["a","b"],
+      matrices:{
+        a:[["1/2","1/2"],["1/2","1/2"]],
+        b:[["1","0"],["0","1"]],
+      },
+    },
+    b:{
+      states:["safe","risk"],
+      initial:["1","0"],
+      safe:["safe"],
+      commands:["a","b"],
+      matrices:{
+        a:[["1/2","1/2"],["1/2","1/2"]],
+        b:[["1/2","1/2"],["0","1"]],
+      },
+    },
+  });
+}
+function exampleEquiv(){
+  hydrate({
+    a:{
+      states:["s","t"],
+      initial:["1","0"],
+      safe:["s"],
+      commands:["x"],
+      matrices:{ x:[["1/3","2/3"],["1/3","2/3"]] },
+    },
+    b:{
+      states:["s","t","u"],
+      initial:["1","0","0"],
+      safe:["s"],
+      commands:["x"],
+      matrices:{ x:[
+        ["1/3","1/3","1/3"],
+        ["1/3","2/3","0"],
+        ["1/3","0","2/3"],
+      ]},
+    },
+  });
+}
+function clearAll(){
+  models.a=emptyModel(); models.b=emptyModel();
+  activeTab.a=0; activeTab.b=0;
+  renderAll();
+  hasResult=false;
+  document.getElementById("stale").style.display="none";
+  document.getElementById("result").style.display="none";
+  document.getElementById("errors").style.display="none";
+}
+
+document.getElementById("btnReview").addEventListener("click",review);
+document.getElementById("btnSave").addEventListener("click",saveDraft);
+document.getElementById("btnLoad").addEventListener("click",loadDraft);
+document.getElementById("btnExample").addEventListener("click",exampleCounter);
+document.getElementById("btnEquivExample").addEventListener("click",exampleEquiv);
+document.getElementById("btnClear").addEventListener("click",clearAll);
+
+renderAll();
+exampleEquiv();
+</script>
+</body>
+</html>

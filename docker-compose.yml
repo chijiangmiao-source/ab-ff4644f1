@@ -1,0 +1,35 @@
+services:
+  web:
+    build: .
+    image: acoustic-procedure-review:latest
+    environment:
+      # 容器内监听端口（可配置）
+      APP_PORT: ${APP_PORT:-8080}
+    ports:
+      # 宿主端口 HOST_PORT（可配置）-> 容器端口 APP_PORT
+      - "${HOST_PORT:-8080}:${APP_PORT:-8080}"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import os,sys,urllib.request as u; sys.exit(0 if u.urlopen('http://127.0.0.1:'+os.environ.get('APP_PORT','8080')+'/health',timeout=3).status==200 else 1)"
+      interval: ${HEALTH_INTERVAL:-10s}
+      timeout: ${HEALTH_TIMEOUT:-3s}
+      start_period: ${HEALTH_START_PERIOD:-5s}
+      retries: 5
+    restart: unless-stopped
+
+  # 一次性验收服务：最短概率反例、构建检查、真实 API 冒烟；
+  # 结束后退出并以自身退出码作为验收退出码。
+  verify:
+    image: acoustic-procedure-review:latest
+    build:
+      context: .
+    depends_on:
+      web:
+        condition: service_healthy
+    environment:
+      APP_BASE_URL: http://web:${APP_PORT:-8080}
+    command: ["python", "tests/verify_all.py"]
+    restart: "no"
